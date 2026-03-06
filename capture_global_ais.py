@@ -20,12 +20,15 @@ from typing import Any
 
 
 
+<<<<<<< HEAD
 def normalize_message_payload(payload: str | bytes) -> str:
     """Normalize websocket payload to text for file output and JSON parsing."""
     if isinstance(payload, bytes):
         return payload.decode("utf-8", errors="replace")
     return payload
 
+=======
+>>>>>>> origin/main
 DEFAULT_CONFIG_PATH = "config.json"
 
 
@@ -157,11 +160,18 @@ def main() -> int:
                 timeout_remaining = max(1, int(end_time - time.time()))
                 ws.settimeout(timeout_remaining)
                 try:
+<<<<<<< HEAD
                     message_raw = ws.recv()
                 except ws_client.WebSocketTimeoutException:
                     break
 
                 message_json = normalize_message_payload(message_raw)
+=======
+                    message_json = ws.recv()
+                except ws_client.WebSocketTimeoutException:
+                    break
+
+>>>>>>> origin/main
                 received_at = datetime.now(timezone.utc).isoformat()
                 jsonl_out.write(message_json + "\n")
 
