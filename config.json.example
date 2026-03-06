@@ -1,0 +1,6 @@
+{
+  "capture_minutes": 5,
+  "bounding_boxes": [[[-90, -180], [90, 180]]],
+  "output_jsonl": "ais_messages.jsonl",
+  "output_csv": "ais_messages.csv"
+}
