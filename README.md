@@ -64,3 +64,6 @@ python3 capture_global_ais.py --config config.json
 If you manually resolved conflicts in GitHub UI, make sure there is only **one** `normalize_message_payload` function definition and no conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 
 Security note: if you accidentally posted your `AISSTREAM_API_KEY` in a public place, revoke it in AISStream and generate a new key immediately.
+
+
+If you see `WebSocketConnectionClosedException: Connection to remote host was lost`, the script now retries automatically during the capture window. Intermittent drops can still happen on unstable networks; keep the terminal open and let it continue reconnecting.

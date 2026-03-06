@@ -87,6 +87,59 @@ def extract_csv_row(message: Dict[str, Any], received_at: str) -> Dict[str, Any]
     }
 
 
+def capture_messages(ws_client: Any, subscribe_message: Dict[str, Any], end_time: float, jsonl_out: Any, csv_writer: Any) -> int:
+    """Capture messages with reconnect handling until end_time."""
+    message_count = 0
+    reconnect_attempts = 0
+
+    while time.time() < end_time:
+        ws = None
+        try:
+            ws = ws_client.create_connection("wss://stream.aisstream.io/v0/stream")
+            ws.send(json.dumps(subscribe_message))
+            reconnect_attempts = 0
+
+            while time.time() < end_time:
+                timeout_remaining = max(1, int(end_time - time.time()))
+                ws.settimeout(timeout_remaining)
+                try:
+                    message_raw = ws.recv()
+                except ws_client.WebSocketTimeoutException:
+                    break
+
+                message_json = normalize_message_payload(message_raw)
+                received_at = datetime.now(timezone.utc).isoformat()
+                jsonl_out.write(message_json + "\n")
+
+                try:
+                    message = json.loads(message_json)
+                except json.JSONDecodeError:
+                    message = {"raw": message_json}
+
+                csv_writer.writerow(extract_csv_row(message, received_at))
+                message_count += 1
+
+        except (ws_client.WebSocketConnectionClosedException, OSError) as exc:
+            reconnect_attempts += 1
+            if time.time() >= end_time:
+                break
+            print(
+                "Warning: websocket connection dropped ({}). Reconnecting (attempt {})...".format(
+                    exc, reconnect_attempts
+                ),
+                file=sys.stderr,
+            )
+            time.sleep(min(2, max(0.1, end_time - time.time())))
+        finally:
+            if ws is not None:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+
+    return message_count
+
+
 def main() -> int:
     args = parse_args()
     api_key = os.environ.get("AISSTREAM_API_KEY")
@@ -149,40 +202,19 @@ def main() -> int:
         "raw_json",
     ]
 
-    message_count = 0
-
     with open(output_jsonl, "w", encoding="utf-8") as jsonl_out, open(
         output_csv, "w", newline="", encoding="utf-8"
     ) as csv_out:
         csv_writer = csv.DictWriter(csv_out, fieldnames=csv_columns)
         csv_writer.writeheader()
 
-        ws = ws_client.create_connection("wss://stream.aisstream.io/v0/stream")
-        try:
-            ws.send(json.dumps(subscribe_message))
-
-            while time.time() < end_time:
-                timeout_remaining = max(1, int(end_time - time.time()))
-                ws.settimeout(timeout_remaining)
-                try:
-                    message_raw = ws.recv()
-                except ws_client.WebSocketTimeoutException:
-                    break
-
-                message_json = normalize_message_payload(message_raw)
-                received_at = datetime.now(timezone.utc).isoformat()
-                jsonl_out.write(message_json + "\n")
-
-                try:
-                    message = json.loads(message_json)
-                except json.JSONDecodeError:
-                    message = {"raw": message_json}
-
-                csv_writer.writerow(extract_csv_row(message, received_at))
-                message_count += 1
-
-        finally:
-            ws.close()
+        message_count = capture_messages(
+            ws_client=ws_client,
+            subscribe_message=subscribe_message,
+            end_time=end_time,
+            jsonl_out=jsonl_out,
+            csv_writer=csv_writer,
+        )
 
     print("Done. Captured {} message(s).".format(message_count))
     return 0
