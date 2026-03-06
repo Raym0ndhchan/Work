@@ -6,8 +6,6 @@ Usage:
   python capture_global_ais.py --config config.json
 """
 
-from __future__ import annotations
-
 import argparse
 import csv
 import json
@@ -16,21 +14,22 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Union
 
 
+DEFAULT_CONFIG_PATH = "config.json"
 
-<<<<<<< HEAD
+
+def normalize_message_payload(payload: Union[str, bytes]) -> str:
 def normalize_message_payload(payload: str | bytes) -> str:
     """Normalize websocket payload to text for file output and JSON parsing."""
     if isinstance(payload, bytes):
         return payload.decode("utf-8", errors="replace")
     return payload
 
-=======
->>>>>>> origin/main
 DEFAULT_CONFIG_PATH = "config.json"
 
+ main
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -44,20 +43,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_config(path: str) -> dict[str, Any]:
+def load_config(path: str) -> Dict[str, Any]:
     config_path = Path(path)
     if not config_path.exists():
         raise FileNotFoundError(
-            f"Config file '{path}' not found. Copy and edit config.json.example first."
+            "Config file '{}' not found. Copy and edit config.json.example first.".format(
+                path
+            )
         )
 
-    with config_path.open("r", encoding="utf-8") as f:
-        config = json.load(f)
+    with config_path.open("r", encoding="utf-8") as file_obj:
+        config = json.load(file_obj)
 
     required = ["capture_minutes", "bounding_boxes", "output_jsonl", "output_csv"]
     missing = [key for key in required if key not in config]
     if missing:
-        raise ValueError(f"Missing required config key(s): {', '.join(missing)}")
+        raise ValueError("Missing required config key(s): {}".format(", ".join(missing)))
 
     if config["capture_minutes"] <= 0:
         raise ValueError("capture_minutes must be greater than 0")
@@ -65,12 +66,12 @@ def load_config(path: str) -> dict[str, Any]:
     return config
 
 
-def extract_csv_row(message: dict[str, Any], received_at: str) -> dict[str, Any]:
+def extract_csv_row(message: Dict[str, Any], received_at: str) -> Dict[str, Any]:
     metadata = message.get("MetaData", {})
     msg_wrapper = message.get("Message", {})
 
     msg_type = ""
-    msg_payload: dict[str, Any] = {}
+    msg_payload = {}
     if isinstance(msg_wrapper, dict) and msg_wrapper:
         msg_type = next(iter(msg_wrapper.keys()))
         payload = msg_wrapper.get(msg_type, {})
@@ -101,7 +102,7 @@ def main() -> int:
     try:
         config = load_config(args.config)
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
-        print(f"Error loading config: {exc}", file=sys.stderr)
+        print("Error loading config: {}".format(exc), file=sys.stderr)
         return 1
 
     capture_minutes = float(config["capture_minutes"])
@@ -109,8 +110,12 @@ def main() -> int:
     try:
         import websocket as ws_client
     except ModuleNotFoundError:
-        print("Error: missing dependency `websocket-client`. Install with `pip install -r requirements.txt`.", file=sys.stderr)
+        print(
+            "Error: missing dependency `websocket-client`. Install with `pip install -r requirements.txt`.",
+            file=sys.stderr,
+        )
         return 1
+
     output_jsonl = str(config["output_jsonl"])
     output_csv = str(config["output_csv"])
     bounding_boxes = config["bounding_boxes"]
@@ -123,11 +128,16 @@ def main() -> int:
     }
 
     print(
-        f"Starting capture for {capture_minutes} minute(s).\n"
-        f"JSONL: {output_jsonl}\n"
-        f"CSV:   {output_csv}\n"
-        f"BoundingBoxes: {bounding_boxes}\n"
-        "This script only runs when you execute it manually."
+        "Starting capture for {} minute(s).\n"
+        "JSONL: {}\n"
+        "CSV:   {}\n"
+        "BoundingBoxes: {}\n"
+        "This script only runs when you execute it manually.".format(
+            capture_minutes,
+            output_jsonl,
+            output_csv,
+            bounding_boxes,
+        )
     )
 
     csv_columns = [
@@ -145,10 +155,9 @@ def main() -> int:
 
     message_count = 0
 
-    with (
-        open(output_jsonl, "w", encoding="utf-8") as jsonl_out,
-        open(output_csv, "w", newline="", encoding="utf-8") as csv_out,
-    ):
+    with open(output_jsonl, "w", encoding="utf-8") as jsonl_out, open(
+        output_csv, "w", newline="", encoding="utf-8"
+    ) as csv_out:
         csv_writer = csv.DictWriter(csv_out, fieldnames=csv_columns)
         csv_writer.writeheader()
 
@@ -160,18 +169,12 @@ def main() -> int:
                 timeout_remaining = max(1, int(end_time - time.time()))
                 ws.settimeout(timeout_remaining)
                 try:
-<<<<<<< HEAD
                     message_raw = ws.recv()
                 except ws_client.WebSocketTimeoutException:
                     break
 
                 message_json = normalize_message_payload(message_raw)
-=======
-                    message_json = ws.recv()
-                except ws_client.WebSocketTimeoutException:
-                    break
-
->>>>>>> origin/main
+ main
                 received_at = datetime.now(timezone.utc).isoformat()
                 jsonl_out.write(message_json + "\n")
 
@@ -179,14 +182,14 @@ def main() -> int:
                     message = json.loads(message_json)
                 except json.JSONDecodeError:
                     message = {"raw": message_json}
-                csv_writer.writerow(extract_csv_row(message, received_at))
 
+                csv_writer.writerow(extract_csv_row(message, received_at))
                 message_count += 1
 
         finally:
             ws.close()
 
-    print(f"Done. Captured {message_count} message(s).")
+    print("Done. Captured {} message(s).".format(message_count))
     return 0
 
 

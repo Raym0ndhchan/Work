@@ -4,6 +4,8 @@ This project provides a **manual-run** Python script to capture AISStream data a
 
 ## 1) Setup
 
+Use Python 3.8+ (recommended: `python3`).
+
 1. Install dependency:
    ```bash
    pip install -r requirements.txt
@@ -31,7 +33,7 @@ Edit `config.json`:
 ## 3) Run (only when you want)
 
 ```bash
-python capture_global_ais.py --config config.json
+python3 capture_global_ais.py --config config.json
 ```
 
 The script does **not** run automatically. It only captures data when you execute the command above.
