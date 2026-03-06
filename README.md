@@ -42,3 +42,25 @@ The script does **not** run automatically. It only captures data when you execut
 
 - JSONL: one raw AIS message per line.
 - CSV: flattened summary columns (`received_at`, `message_type`, `mmsi`, `latitude`, `longitude`, `sog`, `cog`, `heading`, `ship_name`, `raw_json`).
+
+## Troubleshooting
+
+If you see:
+
+```
+IndentationError: expected an indented block after function definition
+```
+
+it usually means your local `capture_global_ais.py` still contains a bad merge edit (for example, duplicate `def normalize_message_payload(...)` lines).
+
+Fix quickly by refreshing from git and re-running:
+
+```bash
+git checkout -- capture_global_ais.py
+python3 -m py_compile capture_global_ais.py
+python3 capture_global_ais.py --config config.json
+```
+
+If you manually resolved conflicts in GitHub UI, make sure there is only **one** `normalize_message_payload` function definition and no conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+
+Security note: if you accidentally posted your `AISSTREAM_API_KEY` in a public place, revoke it in AISStream and generate a new key immediately.

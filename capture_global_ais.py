@@ -21,15 +21,11 @@ DEFAULT_CONFIG_PATH = "config.json"
 
 
 def normalize_message_payload(payload: Union[str, bytes]) -> str:
-def normalize_message_payload(payload: str | bytes) -> str:
     """Normalize websocket payload to text for file output and JSON parsing."""
     if isinstance(payload, bytes):
         return payload.decode("utf-8", errors="replace")
     return payload
 
-DEFAULT_CONFIG_PATH = "config.json"
-
- main
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -38,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         default=DEFAULT_CONFIG_PATH,
-        help=f"Path to config JSON file (default: {DEFAULT_CONFIG_PATH}).",
+        help="Path to config JSON file (default: {}).".format(DEFAULT_CONFIG_PATH),
     )
     return parser.parse_args()
 
@@ -174,7 +170,6 @@ def main() -> int:
                     break
 
                 message_json = normalize_message_payload(message_raw)
- main
                 received_at = datetime.now(timezone.utc).isoformat()
                 jsonl_out.write(message_json + "\n")
 
